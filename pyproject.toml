@@ -39,7 +39,7 @@ kh = "kernel_hunter.cli.app:app"
 include = ["kernel_hunter*"]
 
 [tool.setuptools.package-data]
-kernel_hunter = ["py.typed"]
+kernel_hunter = ["py.typed", "reports/templates/*.j2"]
 
 [tool.ruff]
 line-length = 100

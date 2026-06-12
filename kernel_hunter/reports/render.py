@@ -79,7 +79,7 @@ def render_html(findings: list[Finding], output: Path, template_dir: Path | None
     """Render HTML report."""
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    templates = template_dir or Path(__file__).resolve().parents[2] / "templates"
+    templates = template_dir or Path(__file__).resolve().parent / "templates"
     env = Environment(
         loader=FileSystemLoader(templates),
         autoescape=select_autoescape(["html", "xml"]),

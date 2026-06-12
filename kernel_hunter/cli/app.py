@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -13,11 +12,11 @@ from kernel_hunter.analyzers.base import AnalyzerError
 from kernel_hunter.analyzers.history import HistoryAnalyzer
 from kernel_hunter.analyzers.resource_lifetime import ResourceLifetimeAnalyzer
 from kernel_hunter.analyzers.smatch import SmatchAnalyzer
-from kernel_hunter.models import AnalyzerResult, ScanRun
+from kernel_hunter.models import AnalyzerResult
 from kernel_hunter.reports.render import render_html, render_json, render_markdown, render_terminal
-from kernel_hunter.scorers.confidence import boost_agreement
 from kernel_hunter.storage.sqlite import FindingStore
 from kernel_hunter.tui.app import KernelHunterTui
+from kernel_hunter.services import persist_result, run_first_slice
 from kernel_hunter.utils.config import load_config, resolve_db_path, resolve_kernel_tree
 from kernel_hunter.utils.logging import configure_logging
 
@@ -37,26 +36,6 @@ DbOption = Annotated[Path | None, typer.Option("--db", help="SQLite findings dat
 ConfigOption = Annotated[Path | None, typer.Option("--config", help="Optional config TOML")]
 
 
-def persist_result(result: AnalyzerResult, kernel_tree: Path, db_path: Path) -> int:
-    """Persist analyzer result and return finding count."""
-
-    store = FindingStore(db_path)
-    try:
-        store.add_scan_run(
-            ScanRun(
-                analyzer=result.analyzer,
-                kernel_tree=kernel_tree,
-                finished_at=datetime.now(UTC),
-                metadata=result.metadata,
-                message="; ".join(result.warnings) if result.warnings else None,
-            )
-        )
-        findings = boost_agreement(result.findings)
-        return store.upsert_findings(findings)
-    finally:
-        store.close()
-
-
 def run_analyzer(result: AnalyzerResult, kernel_tree: Path, db_path: Path) -> None:
     """Persist and print an analyzer result."""
 
@@ -67,11 +46,17 @@ def run_analyzer(result: AnalyzerResult, kernel_tree: Path, db_path: Path) -> No
     render_terminal(result.findings, console)
 
 
-@app.callback()
-def main(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) -> None:
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+) -> None:
     """Configure global CLI behavior."""
 
     configure_logging(verbose)
+    if ctx.invoked_subcommand is None:
+        KernelHunterTui().run()
+        raise typer.Exit()
 
 
 @scan_app.command("smatch")
@@ -127,21 +112,9 @@ def scan_all(
     cfg = load_config(config)
     tree = resolve_kernel_tree(kernel_tree, cfg)
     db_path = resolve_db_path(db, cfg)
-    analyzers = [
-        HistoryAnalyzer(),
-        SmatchAnalyzer(log_file=smatch_log),
-        ResourceLifetimeAnalyzer(require_tree_sitter=True),
-    ]
-    all_findings = []
-    for analyzer in analyzers:
-        try:
-            result = analyzer.run(tree, subsystem)
-        except AnalyzerError as exc:
-            console.print(f"[yellow]warning:[/yellow] {analyzer.name}: {exc}")
-            continue
-        persist_result(result, tree, db_path)
-        all_findings.extend(result.findings)
-    all_findings = boost_agreement(all_findings)
+    all_findings, warnings = run_first_slice(tree, db_path, subsystem, smatch_log)
+    for warning in warnings:
+        console.print(f"[yellow]warning:[/yellow] {warning}")
     console.print(f"[green]completed scan; {len(all_findings)} finding(s)[/green]")
     render_terminal(all_findings, console)
 
@@ -249,6 +222,13 @@ def report_html(
 
 @app.command("menu")
 def menu() -> None:
-    """Launch the Textual menu UI."""
+    """Launch the Textual TUI."""
+
+    KernelHunterTui().run()
+
+
+@app.command("tui")
+def tui() -> None:
+    """Launch the Textual TUI."""
 
     KernelHunterTui().run()

@@ -1,0 +1,2 @@
+[console_scripts]
+kh = kernel_hunter.cli.app:app

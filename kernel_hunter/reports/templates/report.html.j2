@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Kernel Hunter Findings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #17202a; }
+    article { border: 1px solid #d7dbdd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    code, pre { background: #f4f6f7; border-radius: 4px; }
+    pre { padding: .75rem; overflow: auto; }
+    .meta { color: #566573; }
+  </style>
+</head>
+<body>
+  <h1>Kernel Hunter Findings</h1>
+  {% for finding in findings %}
+  <article>
+    <h2>[{{ finding.confidence }}] {{ finding.title }}</h2>
+    <p class="meta">{{ finding.severity }} · {{ finding.category }} · {{ finding.file }}:{{ finding.line }}</p>
+    <h3>Evidence</h3>
+    <pre>{{ finding.evidence }}</pre>
+    <h3>Rationale</h3>
+    <p>{{ finding.rationale }}</p>
+    <h3>Suggested Investigation</h3>
+    <p>{{ finding.recommendation }}</p>
+  </article>
+  {% endfor %}
+</body>
+</html>
