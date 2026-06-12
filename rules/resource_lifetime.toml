@@ -1,0 +1,34 @@
+[[resource_lifetime]]
+acquire = "clk_get"
+release = "clk_put"
+category = "clock"
+
+[[resource_lifetime]]
+acquire = "regulator_get"
+release = "regulator_put"
+category = "regulator"
+
+[[resource_lifetime]]
+acquire = "get_device"
+release = "put_device"
+category = "device"
+
+[[resource_lifetime]]
+acquire = "kobject_get"
+release = "kobject_put"
+category = "kobject"
+
+[[resource_lifetime]]
+acquire = "pm_runtime_enable"
+release = "pm_runtime_disable"
+category = "power_management"
+
+[[resource_lifetime]]
+acquire = "request_irq"
+release = "free_irq"
+category = "interrupt"
+
+[[resource_lifetime]]
+acquire = "ioremap"
+release = "iounmap"
+category = "mmio"
